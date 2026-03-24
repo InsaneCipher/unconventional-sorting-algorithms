@@ -199,7 +199,10 @@
   .ctrl-btn:hover { border-color: var(--accent); color: var(--accent); }
   .ctrl-btn.primary { background: var(--accent); color: white; border-color: var(--accent); }
   .ctrl-btn.primary:hover { background: #ff6080; }
+  .ctrl-btn.stop { background: none; border-color: #ff8c00; color: #ff8c00; }
+  .ctrl-btn.stop:hover { background: rgba(255,140,0,0.12); border-color: #ffaa33; color: #ffaa33; }
   .ctrl-btn:disabled { opacity: 0.3; cursor: not-allowed; }
+  #stopBtn { display: none; }
 
   .size-control {
     display: flex;
@@ -353,6 +356,7 @@
           <span id="sizeVal">20</span>
         </div>
         <button class="ctrl-btn" id="resetBtn">↺ Reset</button>
+        <button class="ctrl-btn stop" id="stopBtn">■ Stop</button>
         <button class="ctrl-btn primary" id="startBtn">▶ Sort</button>
       </div>
     </div>
@@ -477,7 +481,7 @@ const ALGORITHMS = {
       const placed = new Array(arr.length).fill(false);
       yield { type: 'start', msg: 'All elements going to sleep... 💤' };
 
-      const promises = arr.map((val, i) => 
+      const promises = arr.map((val, i) =>
         new Promise(resolve => setTimeout(() => resolve({val, i}), val * 18 + 50))
       );
 
@@ -661,21 +665,25 @@ function drawBars() {
     const y = H - barH - 10;
 
     const col = getColor(i);
+
     if (eliminated[i]) {
       ctx.fillStyle = '#1a0a12';
       ctx.fillRect(x, y, barW, barH);
       ctx.fillStyle = '#3a1a2a';
       ctx.fillRect(x, H - 12, barW, 2);
     } else {
-      // Gradient bar
       const grad = ctx.createLinearGradient(x, y, x, y + barH);
-      const base = col || '#2a2a4a';
-      grad.addColorStop(0, col ? col : '#3a3a6a');
-      grad.addColorStop(1, col ? col + '88' : '#1a1a3a');
+      if (col) {
+        grad.addColorStop(0, col);
+        grad.addColorStop(1, col + '88');
+      } else {
+        // Unsorted: teal/green — distinct from the old dark blue, but not glaring
+        grad.addColorStop(0, '#1a5a4a');
+        grad.addColorStop(1, '#0d2e24');
+      }
       ctx.fillStyle = grad;
       ctx.fillRect(x, y, barW, barH);
 
-      // Top highlight
       ctx.fillStyle = col ? 'rgba(255,255,255,0.3)' : 'rgba(255,255,255,0.05)';
       ctx.fillRect(x, y, barW, 2);
     }
@@ -728,6 +736,7 @@ async function runAlgo() {
   setStatus('running');
   document.getElementById('startBtn').disabled = true;
   document.getElementById('resetBtn').disabled = true;
+  document.getElementById('stopBtn').style.display = 'inline-block';
 
   const algo = ALGORITHMS[currentAlgo];
   const gen = algo.run(arr, (i, color) => { highlights[i] = color; });
@@ -789,6 +798,7 @@ async function runAlgo() {
   running = false;
   document.getElementById('startBtn').disabled = false;
   document.getElementById('resetBtn').disabled = false;
+  document.getElementById('stopBtn').style.display = 'none';
 }
 
 function sleep(ms) {
@@ -820,6 +830,17 @@ function selectAlgo(key) {
   setStatus('ready');
   log('Algorithm selected. Press Sort to begin.');
 }
+
+document.getElementById('stopBtn').addEventListener('click', () => {
+  if (!running) return;
+  stopFlag = true;
+  running = false;
+  document.getElementById('stopBtn').style.display = 'none';
+  document.getElementById('startBtn').disabled = false;
+  document.getElementById('resetBtn').disabled = false;
+  setStatus('ready');
+  log('Sorting cancelled. Press Sort to try again, or Reset for a new array.');
+});
 
 document.getElementById('startBtn').addEventListener('click', () => {
   if (!running) runAlgo();
