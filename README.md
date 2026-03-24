@@ -4,6 +4,10 @@ A visual explorer for unconventional, joke, and genuinely terrible sorting algor
 
 Live demo: https://insanecipher.github.io/unconventional-sorting-algorithms/
 
+<img width="1832" height="874" alt="image" src="https://github.com/user-attachments/assets/2f4e94d4-dd37-465b-8114-9d0853f36802" />
+
+
+
 ## Algorithms
 
 **Legit sorts**
