@@ -18,7 +18,7 @@
     --bar-default: #2a2a4a;
     --bar-active: #ff3c5f;
     --bar-compare: #ffdd00;
-    --bar-sorted: #00e5ff;
+    --bar-sorted: #a3e635;
     --bar-eliminated: #3a1a2a;
   }
 
@@ -175,6 +175,53 @@
     flex: 1;
   }
 
+  .algo-analysis {
+    width: 100%;
+    border-top: 1px solid var(--border);
+    padding: 1rem 2rem;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+    gap: 0.75rem 2rem;
+    background: rgba(255,255,255,0.015);
+  }
+
+  .analysis-block { display: flex; flex-direction: column; gap: 0.25rem; }
+
+  .analysis-label {
+    font-size: 0.55rem;
+    text-transform: uppercase;
+    letter-spacing: 0.18em;
+    color: var(--muted);
+  }
+
+  .analysis-value {
+    font-size: 0.72rem;
+    color: var(--accent3);
+    font-weight: 700;
+    letter-spacing: 0.03em;
+  }
+
+  .analysis-note {
+    font-size: 0.62rem;
+    color: var(--muted);
+    line-height: 1.5;
+    margin-top: 0.1rem;
+  }
+
+  .rating-bar {
+    display: flex;
+    gap: 3px;
+    margin-top: 3px;
+  }
+
+  .rating-pip {
+    width: 14px; height: 6px;
+    border-radius: 1px;
+    background: var(--border);
+  }
+
+  .rating-pip.on { background: var(--accent); }
+
   .controls {
     display: flex;
     gap: 0.75rem;
@@ -298,7 +345,7 @@
   }
 
   .status-dot.running { background: var(--accent); animation: pulse 0.6s infinite alternate; }
-  .status-dot.done { background: var(--bar-sorted); }
+  .status-dot.done { background: #a3e635; }
 
   @keyframes pulse { from { opacity: 1; } to { opacity: 0.3; } }
 
@@ -355,11 +402,17 @@
           <input type="range" id="sizeSlider" min="8" max="60" value="20">
           <span id="sizeVal">20</span>
         </div>
+        <div class="size-control">
+          <span>SPEED</span>
+          <input type="range" id="speedSlider" min="0" max="4" value="2" step="1">
+          <span id="speedVal">Normal</span>
+        </div>
         <button class="ctrl-btn" id="resetBtn">↺ Reset</button>
         <button class="ctrl-btn stop" id="stopBtn">■ Stop</button>
         <button class="ctrl-btn primary" id="startBtn">▶ Sort</button>
       </div>
     </div>
+    <div class="algo-analysis" id="algoAnalysis"></div>
 
     <div class="viz-area">
       <div class="canvas-wrap" id="canvasWrap">
@@ -394,10 +447,145 @@
 // ─── ALGORITHMS ──────────────────────────────────────────────────────────────
 
 const ALGORITHMS = {
+  mergesort: {
+    name: 'Merge Sort',
+    complexity: 'O(n log n)',
+    desc: 'Divide the array in half recursively until you have single elements, then merge the halves back together in sorted order. Elegant, stable, and guaranteed fast.',
+    analysis: {
+      best:    { value: 'O(n log n)', note: 'Always divides and merges the same way regardless of input — no shortcuts even on already-sorted data.' },
+      average: { value: 'O(n log n)', note: 'The divide step always produces log n levels, and each level does O(n) work merging. Consistent and predictable.' },
+      worst:   { value: 'O(n log n)', note: 'Unlike Quick Sort, there is no bad pivot — the worst case is identical to the average. Guaranteed performance.' },
+      space:   { value: 'O(n)', note: 'Requires an auxiliary array of size n for the merge step. The main downside compared to in-place sorts.' },
+      stability: 'Stable',
+      practical: 5,
+      practicalNote: 'One of the most widely used sorts in practice. Used in Python\'s Timsort, Java\'s Arrays.sort for objects, and most standard library stable sorts. Ideal when stability matters.'
+    },
+    async* run(arr, mark) {
+      const n = arr.length;
+      let placements = 0;
+
+      // Bottom-up merge sort — no recursion, no snapshot issues
+      // Each pass merges sub-arrays of increasing width
+      for (let width = 1; width < n; width *= 2) {
+        for (let l = 0; l < n; l += 2 * width) {
+          const m = Math.min(l + width - 1, n - 1);
+          const r = Math.min(l + 2 * width - 1, n - 1);
+          if (m >= r) continue;
+
+          yield { type: 'recurse', l, h: r, msg: `Merging [${l}..${m}] and [${m+1}..${r}]` };
+
+          // Copy the two halves
+          const left  = arr.slice(l, m + 1);
+          const right = arr.slice(m + 1, r + 1);
+          let i = 0, j = 0, k = l;
+
+          while (i < left.length && j < right.length) {
+            yield { type: 'compare', l: k, h: m + 1 + j, msg: `Comparing ${left[i]} and ${right[j]}` };
+            if (left[i] <= right[j]) {
+              arr[k++] = left[i++];
+            } else {
+              arr[k++] = right[j++];
+            }
+            placements++;
+            yield { type: 'swap', l: k - 1, h: k - 1, msg: `Placed ${arr[k-1]} at position ${k-1}`, swaps: placements };
+          }
+          while (i < left.length) {
+            arr[k++] = left[i++];
+            placements++;
+            yield { type: 'swap', l: k-1, h: k-1, msg: `Placed ${arr[k-1]} at position ${k-1}`, swaps: placements };
+          }
+          while (j < right.length) {
+            arr[k++] = right[j++];
+            placements++;
+            yield { type: 'swap', l: k-1, h: k-1, msg: `Placed ${arr[k-1]} at position ${k-1}`, swaps: placements };
+          }
+        }
+      }
+
+      yield { type: 'done', msg: `Merge sort complete! ${placements} placements.` };
+    }
+  },
+
+  quicksort: {
+    name: 'Quick Sort',
+    complexity: 'O(n log n) avg',
+    desc: 'Pick a pivot, partition everything smaller to its left and larger to its right, then recurse on both halves. Fast in practice, beautiful to watch.',
+    analysis: {
+      best:    { value: 'O(n log n)', note: 'When the pivot always lands near the middle, the recursion tree has log n levels each doing O(n) partition work.' },
+      average: { value: 'O(n log n)', note: 'With random or median-of-three pivot selection, the average partition is good enough to maintain O(n log n) across virtually all real inputs.' },
+      worst:   { value: 'O(n²)',      note: 'If the pivot is always the smallest or largest element (e.g. sorted input with a naive pivot), the recursion degrades to n levels — hence the O(n²) worst case.' },
+      space:   { value: 'O(log n)',   note: 'In-place partitioning needs no auxiliary array. The O(log n) space is just the recursion call stack depth.' },
+      stability: 'Unstable',
+      practical: 5,
+      practicalNote: 'The fastest general-purpose sort in practice due to excellent cache performance. Used in C\'s qsort, C++ std::sort, and most language runtimes for primitive types. The gold standard.'
+    },
+    async* run(arr, mark) {
+      const steps = [];
+
+      function partition(a, low, high) {
+        const mid = Math.floor((low + high) / 2);
+        if (a[mid] < a[low]) { [a[low], a[mid]] = [a[mid], a[low]]; steps.push({ type: 'swap', l: low, h: mid, arr: [...a], msg: `Median pivot swap` }); }
+        if (a[high] < a[low]) { [a[low], a[high]] = [a[high], a[low]]; steps.push({ type: 'swap', l: low, h: high, arr: [...a], msg: `Median pivot swap` }); }
+        if (a[mid] < a[high]) { [a[mid], a[high]] = [a[high], a[mid]]; steps.push({ type: 'swap', l: mid, h: high, arr: [...a], msg: `Median pivot swap` }); }
+        const pivot = a[high];
+        steps.push({ type: 'pivot', idx: high, arr: [...a], msg: `Pivot chosen: ${pivot} at index ${high}` });
+        let i = low - 1;
+        for (let j = low; j < high; j++) {
+          steps.push({ type: 'compare', l: j, h: high, arr: [...a], msg: `Comparing ${a[j]} with pivot ${pivot}` });
+          if (a[j] <= pivot) {
+            i++;
+            [a[i], a[j]] = [a[j], a[i]];
+            steps.push({ type: 'swap', l: i, h: j, arr: [...a], msg: `${a[i]} ≤ pivot, swapping indices ${i} and ${j}` });
+          }
+        }
+        [a[i + 1], a[high]] = [a[high], a[i + 1]];
+        steps.push({ type: 'swap', l: i + 1, h: high, arr: [...a], msg: `Pivot ${pivot} settled at index ${i + 1}` });
+        return i + 1;
+      }
+
+      function quickSort(a, low, high) {
+        if (low < high) {
+          const pi = partition(a, low, high);
+          steps.push({ type: 'partitioned', pi, low, high, arr: [...a], msg: `Partition done. Pivot at ${pi}. Recursing on [${low}..${pi-1}] and [${pi+1}..${high}]` });
+          quickSort(a, low, pi - 1);
+          quickSort(a, pi + 1, high);
+        }
+      }
+
+      quickSort(arr, 0, arr.length - 1);
+
+      let swapCount = 0;
+      for (const step of steps) {
+        arr.length = 0;
+        step.arr.forEach(v => arr.push(v));
+        if (step.type === 'compare') {
+          yield { type: 'compare', l: step.l, h: step.h, msg: step.msg };
+        } else if (step.type === 'swap') {
+          swapCount++;
+          yield { type: 'swap', l: step.l, h: step.h, msg: step.msg, swaps: swapCount };
+        } else if (step.type === 'pivot') {
+          yield { type: 'find-max', maxIdx: step.idx, msg: step.msg };
+        } else if (step.type === 'partitioned') {
+          yield { type: 'recurse', l: step.low, h: step.high, msg: step.msg };
+        }
+      }
+      yield { type: 'done', msg: `Quick sort complete! ${swapCount} swaps.` };
+    }
+  },
+
   bogo: {
     name: 'Bogo Sort',
     complexity: 'O((n+1)!) avg',
     desc: 'Randomly shuffles the array until it happens to be sorted. Statistically cursed. Theoretically works. Practically never.',
+    analysis: {
+      best:    { value: 'O(n)',       note: 'Lucky — the array is already sorted on the first check.' },
+      average: { value: 'O((n+1)!)', note: 'Expected number of shuffles is (n+1)!, which grows faster than exponential. For n=10 that\'s ~40 million attempts on average.' },
+      worst:   { value: 'O(∞)',       note: 'Theoretically infinite — there is no guaranteed upper bound. It could shuffle forever and never land on sorted order.' },
+      space:   { value: 'O(1)',       note: 'Sorts in-place. No extra memory beyond a few loop variables.' },
+      stability: 'Unstable',
+      practical: 1,
+      practicalNote: 'Completely impractical. Even n=12 would take millions of shuffles on average. Used purely as a joke/teaching example.'
+    },
     async* run(arr, mark) {
       function isSorted(a) {
         for (let i = 0; i < a.length - 1; i++) if (a[i] > a[i+1]) return false;
@@ -424,6 +612,15 @@ const ALGORITHMS = {
     name: 'Stalin Sort',
     complexity: 'O(n) — brutally',
     desc: 'Any element that is not in order is immediately removed (eliminated). The remaining elements are sorted by definition. Efficient. Uncompromising.',
+    analysis: {
+      best:    { value: 'O(n)', note: 'Always a single pass — every element is visited exactly once regardless of input.' },
+      average: { value: 'O(n)', note: 'Perfectly linear. No comparisons are ever revisited. The algorithm never backtracks.' },
+      worst:   { value: 'O(n)', note: 'Even in the worst case (descending order), it\'s still one pass — it just eliminates everything except the first element.' },
+      space:   { value: 'O(1)', note: 'In-place elimination. No auxiliary array needed — elements are simply flagged and ignored.' },
+      stability: 'N/A',
+      practical: 2,
+      practicalNote: 'Fast but destructive — it doesn\'t actually sort, it deletes. You lose most of your data. Only "works" if you redefine what sorted means.'
+    },
     async* run(arr, mark) {
       const eliminated = new Array(arr.length).fill(false);
       let kept = [0];
@@ -446,6 +643,15 @@ const ALGORITHMS = {
     name: 'Thanos Sort',
     complexity: 'O(n log n) snaps',
     desc: 'Perfectly balanced, as all things should be. Repeatedly snaps away half the elements — the largest half — until the array is sorted or only one element remains.',
+    analysis: {
+      best:    { value: 'O(n log n)', note: 'Each snap halves the remaining elements after an O(n) sort step to find the largest half, giving O(n log n) total work.' },
+      average: { value: 'O(n log n)', note: 'Consistently O(n log n) — log n snaps are always needed to reduce n elements to 1, each requiring a linear scan.' },
+      worst:   { value: 'O(n log n)', note: 'No worse case — the halving is deterministic. Ironically one of the more consistent algorithms here.' },
+      space:   { value: 'O(n)',       note: 'Needs an auxiliary sorted copy of the active indices to determine which half to eliminate each snap.' },
+      stability: 'Unstable',
+      practical: 2,
+      practicalNote: 'Like Stalin Sort, it achieves "sorted" by removal, not rearrangement. You\'re left with at most 1 element. Great for universe balancing, terrible for data.'
+    },
     async* run(arr, mark) {
       const eliminated = new Array(arr.length).fill(false);
       let activeIndices = arr.map((_, i) => i);
@@ -476,27 +682,46 @@ const ALGORITHMS = {
     name: 'Sleep Sort',
     complexity: 'O(max(arr)) time',
     desc: 'Each element schedules itself to be placed after sleeping for its own value in milliseconds. Smaller values wake up first. It just... works.',
+    analysis: {
+      best:    { value: 'O(max(n))', note: 'Total wall-clock time is determined by the largest value in the array, not the number of elements.' },
+      average: { value: 'O(max(n))', note: 'Regardless of array size, sorting completes in time proportional to the maximum value. 1000 tiny numbers finish faster than 2 huge ones.' },
+      worst:   { value: 'O(max(n))', note: 'If the largest value is enormous (e.g. 1,000,000), you\'re waiting a long time even for a 3-element array.' },
+      space:   { value: 'O(n)',      note: 'Spawns n concurrent timers, each holding a reference to its value and index.' },
+      stability: 'Unstable',
+      practical: 2,
+      practicalNote: 'Surprisingly works in practice for small integer arrays, but completely breaks for large values, duplicate values, or floats. Parallelism-dependent and non-deterministic.'
+    },
     async* run(arr, mark) {
-      const output = [];
-      const placed = new Array(arr.length).fill(false);
-      yield { type: 'start', msg: 'All elements going to sleep... 💤' };
+      const sorted = [];
+      const wake_order = [];
 
-      const promises = arr.map((val, i) =>
-        new Promise(resolve => setTimeout(() => resolve({val, i}), val * 18 + 50))
-      );
+      yield { type: 'start', msg: `All ${arr.length} elements going to sleep... 💤` };
 
-      for (let step = 0; step < arr.length; step++) {
-        const {val, i} = await Promise.race(promises.filter((_,idx) => !placed[arr[idx] === arr[i] ? idx : idx]));
-        // Actually resolve in order
-        const next = await new Promise(resolve => {
-          const remaining = arr.map((v,i) => ({v,i})).filter(({i}) => !placed[i]);
-          const min = remaining.reduce((a,b) => a.v < b.v ? a : b);
-          setTimeout(() => resolve(min), min.v * 15 + 30);
-          placed[min.i] = true; // mark as claimed
+      // Fire all timers concurrently — each sleeps proportional to its value
+      // Use a small multiplier (40ms) so it completes in reasonable time
+      const MULTIPLIER = 40;
+      await new Promise(resolve => {
+        let done = 0;
+        arr.forEach((val, origIdx) => {
+          setTimeout(() => {
+            wake_order.push({ val, origIdx });
+            done++;
+            if (done === arr.length) resolve();
+          }, val * MULTIPLIER);
         });
-        output.push(next);
-        yield { type: 'sleep-place', output: output.map(o=>o.i), placed, msg: `${next.v} woke up and took position ${output.length - 1}` };
+      });
+
+      // Now replay the wake order as visual steps
+      const placedFlags = new Array(arr.length).fill(false);
+      for (let pos = 0; pos < wake_order.length; pos++) {
+        const { val, origIdx } = wake_order[pos];
+        sorted.push(origIdx);
+        placedFlags[origIdx] = true;
+        // Write sorted values back into arr so the bars show sorted order building up
+        arr[pos] = val;
+        yield { type: 'sleep-place', output: [...sorted], placed: [...placedFlags], msg: `${val} woke up → placed at position ${pos}` };
       }
+
       yield { type: 'done', msg: 'Everyone woke up in order. 🌅' };
     }
   },
@@ -505,6 +730,15 @@ const ALGORITHMS = {
     name: 'Miracle Sort',
     complexity: 'O(∞) hoped',
     desc: 'Checks if the array is sorted. If not, waits and checks again. Relies entirely on cosmic rays flipping the right bits in memory. Inspirational.',
+    analysis: {
+      best:    { value: 'O(n)',  note: 'If the array is already sorted, a single O(n) check confirms it and we\'re done. The miracle already happened.' },
+      average: { value: 'O(∞)', note: 'Expected wait time for cosmic rays to flip exactly the right bits in exactly the right order is astronomical — longer than the age of the universe for even tiny arrays.' },
+      worst:   { value: 'O(∞)', note: 'Theoretically infinite. The cosmic rays might never come. In practice, this implementation gives up and cheats after 60 checks.' },
+      space:   { value: 'O(1)', note: 'Does nothing to memory intentionally. Any changes are accidental side effects of high-energy particle bombardment.' },
+      stability: 'Undefined',
+      practical: 1,
+      practicalNote: 'The least practical algorithm ever conceived. Requires a particle accelerator pointed at your RAM. Not recommended in production environments.'
+    },
     async* run(arr, mark) {
       function isSorted(a) {
         for (let i = 0; i < a.length - 1; i++) if (a[i] > a[i+1]) return false;
@@ -515,16 +749,9 @@ const ALGORITHMS = {
       while (!isSorted(arr) && checks < 60) {
         checks++;
         yield { type: 'check', checks, msg: `Check #${checks}: not sorted yet. Praying harder...` };
-        // Tiny chance of miracle
-        if (Math.random() < 0.03) {
-          arr.sort((a,b) => a-b);
-          yield { type: 'miracle', msg: '✨ A MIRACLE OCCURRED! ✨ (ok we cheated a little)' };
-          break;
-        }
       }
       if (!isSorted(arr)) {
-        arr.sort((a,b) => a-b);
-        yield { type: 'done', msg: `No miracle after ${checks} checks. Sorted it manually. Sorry.` };
+        yield { type: 'done', msg: `No miracle after ${checks} checks. Array remains unsorted. 🤷` };
       } else {
         yield { type: 'done', msg: 'The universe provided. 🌟' };
       }
@@ -535,6 +762,15 @@ const ALGORITHMS = {
     name: 'Gnome Sort',
     complexity: 'O(n²)',
     desc: 'A gnome sorts flower pots. If the current pot is in the right place, move forward. Otherwise, swap with the previous pot and step back. Simple gnome logic.',
+    analysis: {
+      best:    { value: 'O(n)',  note: 'If the array is already sorted, the gnome walks straight through without a single swap — just n forward steps.' },
+      average: { value: 'O(n²)', note: 'On a random array, the gnome spends a lot of time walking backwards fixing out-of-place elements, averaging quadratic time.' },
+      worst:   { value: 'O(n²)', note: 'Reverse-sorted input is the worst case — every insertion requires the gnome to walk all the way back to position 0 and then forward again.' },
+      space:   { value: 'O(1)', note: 'In-place. Only needs a position pointer — no auxiliary storage at all.' },
+      stability: 'Stable',
+      practical: 3,
+      practicalNote: 'Equivalent to insertion sort but implemented differently. Genuinely usable for small arrays or nearly-sorted data. Simple enough to implement from memory.'
+    },
     async* run(arr, mark) {
       let pos = 0;
       let swaps = 0;
@@ -558,6 +794,15 @@ const ALGORITHMS = {
     name: 'Stooge Sort',
     complexity: 'O(n^2.71)',
     desc: 'Sort the first 2/3, then the last 2/3, then the first 2/3 again. Recursively. It is provably correct. It is also provably silly.',
+    analysis: {
+      best:    { value: 'O(n^2.71)', note: 'No best case optimisation — it always performs all three recursive calls regardless of whether the data is already sorted.' },
+      average: { value: 'O(n^2.71)', note: 'The recurrence T(n) = 3T(2n/3) + O(1) solves to O(n^log₁.₅(3)) ≈ O(n^2.71). Worse than bubble sort\'s O(n²).' },
+      worst:   { value: 'O(n^2.71)', note: 'Always the same. Stooge sort has no awareness of input order and blindly recurses every time.' },
+      space:   { value: 'O(log n)', note: 'Recursive call stack depth is O(log₁.₅ n) ≈ O(log n). No auxiliary arrays needed.' },
+      stability: 'Unstable',
+      practical: 2,
+      practicalNote: 'Intentionally bad. Slower than bubble sort, shell sort, and insertion sort. Named after the Three Stooges. Its only virtue is being a memorable recursion example.'
+    },
     async* run(arr, mark) {
       const steps = [];
       function stooge(a, l, h) {
@@ -589,6 +834,15 @@ const ALGORITHMS = {
     name: 'Pancake Sort',
     complexity: 'O(n²) flips',
     desc: 'You can only sort by flipping the top k elements of the stack (reversing a prefix). Like sorting a stack of pancakes with a spatula. Breakfast computing.',
+    analysis: {
+      best:    { value: 'O(n)',  note: 'If the array is already sorted, no flips are needed — the maximum element is always already in place for each sub-array.' },
+      average: { value: 'O(n²)', note: 'Each of the n passes requires finding the maximum (O(n)) and at most 2 flips. Total flips ≤ 2(n−1), but the scan cost dominates.' },
+      worst:   { value: 'O(n²)', note: 'At most 2n−3 flips are ever needed (proven). The O(n²) comes from the linear scans to find the maximum in each pass.' },
+      space:   { value: 'O(1)', note: 'All flips are in-place reversals of a prefix. No extra memory beyond loop counters.' },
+      stability: 'Unstable',
+      practical: 3,
+      practicalNote: 'Has real theoretical interest — finding the minimum number of flips is an NP-hard problem (the "burnt pancake problem"). Bill Gates co-authored a paper on it in 1979.'
+    },
     async* run(arr, mark) {
       let flips = 0;
       function flip(a, k) {
@@ -614,12 +868,93 @@ const ALGORITHMS = {
       }
       yield { type: 'done', msg: `Sorted with ${flips} flips! 🥞` };
     }
+  },
+
+  genghis: {
+    name: 'Genghis Khan Sort',
+    complexity: 'O(n)',
+    desc: 'Conquer everything. Keep only the first element, then repopulate the array with its successive integers. The result is always sorted — because you rewrote history.',
+    analysis: {
+      best:    { value: 'O(n)', note: 'Always a single pass to eliminate, then n-1 assignments to repopulate. No comparisons needed.' },
+      average: { value: 'O(n)', note: 'Perfectly linear regardless of input. The original data is irrelevant — it is all destroyed anyway.' },
+      worst:   { value: 'O(n)', note: 'No worst case. The algorithm is indifferent to input order. It simply does not care about your data.' },
+      space:   { value: 'O(1)', note: 'In-place conquest. The array is overwritten directly with no auxiliary storage.' },
+      stability: 'N/A',
+      practical: 1,
+      practicalNote: 'Does not sort your data at all — it replaces it entirely. Only "works" if you wanted the array [first, first+1, first+2, ...] all along. Destructive beyond recovery.'
+    },
+    async* run(arr, mark) {
+      const first = arr[0];
+      const n = arr.length;
+      yield { type: 'start', msg: `The Khan surveys ${n} elements. Only ${first} shall remain.` };
+
+      // Eliminate everything except index 0
+      for (let i = 1; i < n; i++) {
+        eliminated[i] = true;
+        yield { type: 'eliminate', eliminated: [...eliminated], indices: [0], msg: `Eliminating index ${i} (value ${arr[i]})...` };
+      }
+
+      yield { type: 'conquer', msg: `All eliminated. Repopulating from ${first}...` };
+
+      // Repopulate with successors
+      for (let i = 1; i < n; i++) {
+        eliminated[i] = false;
+        arr[i] = first + i;
+        yield { type: 'keep', indices: Array.from({length: i+1}, (_, k) => k), eliminated: [...eliminated], msg: `Position ${i} → ${arr[i]}` };
+      }
+
+      yield { type: 'done', msg: `Conquest complete. Array is now [${first}..${first + n - 1}]. 🏇` };
+    }
+  },
+
+  oddpurge: {
+    name: 'Odd Purge Sort',
+    complexity: 'O(n) maybe',
+    desc: 'Delete every element at an odd index. The remaining even-indexed elements may or may not be sorted. Results are chaotic. Nobody said it was fair.',
+    analysis: {
+      best:    { value: 'O(n)', note: 'A single pass marks every odd-indexed element for elimination. Always linear regardless of values.' },
+      average: { value: 'O(n)', note: 'Exactly ⌊n/2⌋ elements are always eliminated — no branching, no comparisons, purely positional.' },
+      worst:   { value: 'O(n)', note: 'No worst case in terms of time — but the output is almost always not sorted. That is the worst case for your data.' },
+      space:   { value: 'O(1)', note: 'In-place. Elements are simply flagged as eliminated by their index position.' },
+      stability: 'N/A',
+      practical: 1,
+      practicalNote: 'Eliminates half your data based purely on index position with zero regard for values. The remaining elements are sorted only by cosmic coincidence. Philosophically interesting, practically useless.'
+    },
+    async* run(arr, mark) {
+      const n = arr.length;
+      yield { type: 'start', msg: `Scanning ${n} elements. Odd indices will not survive.` };
+
+      let purged = 0;
+      for (let i = 0; i < n; i++) {
+        if (i % 2 === 1) {
+          eliminated[i] = true;
+          purged++;
+          yield { type: 'eliminate', eliminated: [...eliminated], indices: [], msg: `Index ${i} (value ${arr[i]}) — odd. Purged.` };
+        } else {
+          yield { type: 'keep', indices: [i], eliminated: [...eliminated], msg: `Index ${i} (value ${arr[i]}) — even. Spared.` };
+        }
+      }
+
+      // Check if what's left happens to be sorted
+      const survivors = arr.filter((_, i) => !eliminated[i]);
+      const isSorted = survivors.every((v, i, a) => i === 0 || a[i-1] <= v);
+
+      yield {
+        type: 'done',
+        msg: isSorted
+          ? `${purged} purged. ${survivors.length} remain — and by pure luck, they're sorted! 🎲`
+          : `${purged} purged. ${survivors.length} remain — not sorted. As expected.`
+      };
+    }
   }
 };
 
 // ─── STATE ────────────────────────────────────────────────────────────────────
 
-let currentAlgo = 'bogo';
+// Algorithms where we can meaningfully track confirmed-sorted positions live
+const POSITIONAL_ALGOS = new Set(['gnome', 'pancake', 'stooge', 'mergesort', 'quicksort']);
+
+let currentAlgo = 'mergesort';
 let arr = [];
 let highlights = {}; // index -> color
 let eliminated = [];
@@ -647,6 +982,23 @@ function getColor(i) {
   return null;
 }
 
+function getConfirmedSorted() {
+  if (!running || !POSITIONAL_ALGOS.has(currentAlgo)) return new Set();
+  const n = arr.length;
+  const confirmed = new Set();
+  // Confirmed sorted prefix: values equal to 1, 2, 3... from the left
+  for (let i = 0; i < n; i++) {
+    if (arr[i] === i + 1) confirmed.add(i);
+    else break;
+  }
+  // Confirmed sorted suffix: values equal to n, n-1, n-2... from the right
+  for (let i = n - 1; i >= 0; i--) {
+    if (arr[i] === i + 1) confirmed.add(i);
+    else break;
+  }
+  return confirmed;
+}
+
 function drawBars() {
   const W = canvas.width / devicePixelRatio;
   const H = canvas.height / devicePixelRatio;
@@ -658,18 +1010,23 @@ function drawBars() {
   const gap = Math.max(1, Math.floor(W / n * 0.1));
   const barW = (W - gap * (n + 1)) / n;
   const maxVal = Math.max(...arr);
+  const confirmed = getConfirmedSorted();
 
   for (let i = 0; i < n; i++) {
     const x = gap + i * (barW + gap);
     const barH = (arr[i] / maxVal) * (H - 30);
     const y = H - barH - 10;
 
-    const col = getColor(i);
+    // Algorithm highlight takes priority, then confirmed-sorted, then default
+    const col = highlights[i] || (confirmed.has(i) ? '#a3e635' : null);
 
     if (eliminated[i]) {
-      ctx.fillStyle = '#1a0a12';
+      const grad = ctx.createLinearGradient(x, y, x, y + barH);
+      grad.addColorStop(0, '#5a1220');
+      grad.addColorStop(1, '#280810');
+      ctx.fillStyle = grad;
       ctx.fillRect(x, y, barW, barH);
-      ctx.fillStyle = '#3a1a2a';
+      ctx.fillStyle = '#7a1828';
       ctx.fillRect(x, H - 12, barW, 2);
     } else {
       const grad = ctx.createLinearGradient(x, y, x, y + barH);
@@ -677,9 +1034,9 @@ function drawBars() {
         grad.addColorStop(0, col);
         grad.addColorStop(1, col + '88');
       } else {
-        // Unsorted: teal/green — distinct from the old dark blue, but not glaring
-        grad.addColorStop(0, '#1a5a4a');
-        grad.addColorStop(1, '#0d2e24');
+        // Unsorted: bright grey
+        grad.addColorStop(0, '#9090a8');
+        grad.addColorStop(1, '#484860');
       }
       ctx.fillStyle = grad;
       ctx.fillRect(x, y, barW, barH);
@@ -727,7 +1084,9 @@ function setStatus(state) {
 
 // ─── RUNNER ───────────────────────────────────────────────────────────────────
 
-const SPEED_MS = 60;
+const SPEED_LEVELS = [600, 200, 60, 20, 4];
+const SPEED_LABELS = ['Slowest', 'Slow', 'Normal', 'Fast', 'Fastest'];
+function getDelay() { return SPEED_LEVELS[parseInt(document.getElementById('speedSlider').value)]; }
 
 async function runAlgo() {
   if (running) return;
@@ -768,14 +1127,14 @@ async function runAlgo() {
       if (step.h !== undefined) highlights[step.h] = '#ff3c5f';
     }
     if (step.type === 'keep' || step.type === 'after-snap') {
-      if (step.indices) step.indices.forEach(i => { highlights[i] = '#00e5ff'; });
+      if (step.indices) step.indices.forEach(i => { highlights[i] = '#a3e635'; });
     }
     if (step.type === 'eliminate' || step.type === 'snap') {
       if (step.eliminated) eliminated = [...step.eliminated];
-      if (step.indices) step.indices.forEach(i => { if (!eliminated[i]) highlights[i] = '#00e5ff'; });
+      if (step.indices) step.indices.forEach(i => { if (!eliminated[i]) highlights[i] = '#a3e635'; });
     }
     if (step.type === 'sleep-place') {
-      if (step.output) step.output.forEach((i, rank) => { highlights[i] = '#00e5ff'; });
+      if (step.output) step.output.forEach((i, rank) => { highlights[i] = '#a3e635'; });
     }
     if (step.type === 'find-max') {
       highlights[step.maxIdx] = '#ffdd00';
@@ -784,14 +1143,22 @@ async function runAlgo() {
       arr.forEach((_, i) => { highlights[i] = '#ffdd00'; });
     }
     if (step.type === 'done') {
-      arr.forEach((_, i) => { if (!eliminated[i]) highlights[i] = '#00e5ff'; });
+      // If the step tells us exactly which indices survived (e.g. Thanos), use those directly
+      if (step.activeIndices) {
+        step.activeIndices.forEach(i => { highlights[i] = '#a3e635'; });
+      } else {
+        // Otherwise check only non-eliminated values
+        const survivors = arr.filter((_, i) => !eliminated[i]);
+        const sorted = survivors.every((v, i, a) => i === 0 || a[i-1] <= v);
+        if (sorted) arr.forEach((_, i) => { if (!eliminated[i]) highlights[i] = '#a3e635'; });
+      }
     }
 
     if (step.msg) log(step.msg);
     updateStats();
     drawBars();
 
-    if (step.type !== 'done') await sleep(SPEED_MS);
+    if (step.type !== 'done') await sleep(getDelay());
   }
 
   setStatus('done');
@@ -806,6 +1173,51 @@ function sleep(ms) {
 }
 
 // ─── UI SETUP ────────────────────────────────────────────────────────────────
+
+function renderAnalysis(key) {
+  const a = ALGORITHMS[key].analysis;
+  const panel = document.getElementById('algoAnalysis');
+  if (!a) { panel.innerHTML = ''; return; }
+
+  function pips(score, max = 5) {
+    return Array.from({length: max}, (_, i) =>
+      `<div class="rating-pip${i < score ? ' on' : ''}"></div>`
+    ).join('');
+  }
+
+  panel.innerHTML = `
+    <div class="analysis-block">
+      <div class="analysis-label">Best Case</div>
+      <div class="analysis-value">${a.best.value}</div>
+      <div class="analysis-note">${a.best.note}</div>
+    </div>
+    <div class="analysis-block">
+      <div class="analysis-label">Average Case</div>
+      <div class="analysis-value">${a.average.value}</div>
+      <div class="analysis-note">${a.average.note}</div>
+    </div>
+    <div class="analysis-block">
+      <div class="analysis-label">Worst Case</div>
+      <div class="analysis-value">${a.worst.value}</div>
+      <div class="analysis-note">${a.worst.note}</div>
+    </div>
+    <div class="analysis-block">
+      <div class="analysis-label">Space</div>
+      <div class="analysis-value">${a.space.value}</div>
+      <div class="analysis-note">${a.space.note}</div>
+    </div>
+    <div class="analysis-block">
+      <div class="analysis-label">Stability</div>
+      <div class="analysis-value" style="color:${a.stability === 'Stable' ? 'var(--bar-sorted)' : a.stability === 'Unstable' ? 'var(--accent)' : 'var(--muted)'}">${a.stability}</div>
+      <div class="analysis-note">Practicality rating</div>
+      <div class="rating-bar">${pips(a.practical)}</div>
+    </div>
+    <div class="analysis-block" style="grid-column: span 2;">
+      <div class="analysis-label">Practical Verdict</div>
+      <div class="analysis-note" style="color:var(--text)">${a.practicalNote}</div>
+    </div>
+  `;
+}
 
 function buildSidebar() {
   const sidebar = document.querySelector('.sidebar');
@@ -825,6 +1237,7 @@ function selectAlgo(key) {
   document.querySelectorAll('.algo-btn').forEach(b => b.classList.toggle('active', b.dataset.key === key));
   document.getElementById('algoTitle').textContent = ALGORITHMS[key].name.toUpperCase();
   document.getElementById('algoDesc').textContent = ALGORITHMS[key].desc;
+  renderAnalysis(key);
   const n = parseInt(document.getElementById('sizeSlider').value);
   makeArray(n);
   setStatus('ready');
@@ -866,13 +1279,21 @@ slider.addEventListener('input', () => {
   makeArray(parseInt(slider.value));
 });
 
+document.getElementById('speedSlider').addEventListener('input', function() {
+  document.getElementById('speedVal').textContent = SPEED_LABELS[parseInt(this.value)];
+});
+
 window.addEventListener('resize', resizeCanvas);
 
 // ─── INIT ────────────────────────────────────────────────────────────────────
 
 buildSidebar();
-selectAlgo('bogo');
+selectAlgo('mergesort');
 setTimeout(resizeCanvas, 100);
+
+// Sync slider labels to their initial values on load
+document.getElementById('sizeVal').textContent = document.getElementById('sizeSlider').value;
+document.getElementById('speedVal').textContent = SPEED_LABELS[parseInt(document.getElementById('speedSlider').value)];
 </script>
 </body>
 </html>
