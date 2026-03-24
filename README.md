@@ -1,1 +1,44 @@
-# unconventional-sorting-algorithms
+# CHAOS SORT
+
+A visual sorting algorithm explorer built with plain HTML and JavaScript — no frameworks, no dependencies, no build step. Just open the file.
+
+## Algorithms
+
+**Legit sorts**
+- **Merge Sort** — O(n log n) guaranteed, stable, bottom-up iterative
+- **Quick Sort** — O(n log n) average, in-place, median-of-three pivot
+
+**Unconventional sorts**
+- **Bogo Sort** — shuffle randomly until sorted (gives up after 2000 attempts)
+- **Stalin Sort** — eliminate any out-of-order element
+- **Thanos Sort** — snap away the largest half repeatedly until balanced
+- **Sleep Sort** — each element sleeps for its own value in ms, wakes in order
+- **Miracle Sort** — check if sorted, hope for cosmic rays, give up after 60 checks
+- **Gnome Sort** — a gnome walks back and forth swapping flower pots
+- **Stooge Sort** — sort first 2/3, last 2/3, first 2/3 again, recursively
+- **Pancake Sort** — only allowed to flip prefixes of the array
+- **Genghis Khan Sort** — keep only the first element, repopulate with its successors
+- **Odd Purge Sort** — delete every odd-indexed element, results may vary
+
+## Features
+
+- Live bar chart visualisation with colour-coded states
+- Adjustable array size (8–60 elements) and speed (Slowest → Fastest)
+- Stop button to cancel mid-sort
+- Per-algorithm complexity breakdown (best, average, worst, space, stability)
+- Confirmed-sorted bars turn green live during in-place sorts
+- Step-by-step log output
+
+## Usage
+
+Download `chaos-sort.html` and open it in any modern browser. No server needed.
+
+## Colours
+
+| Colour | Meaning |
+|--------|---------|
+| Grey | Unsorted |
+| 🟡 Yellow | Being compared |
+| 🔴 Red | Being swapped / active |
+| 🟢 Green | Sorted / confirmed in place |
+| Dark red | Eliminated |
