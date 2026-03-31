@@ -102,9 +102,34 @@
     text-transform: uppercase;
     letter-spacing: 0.2em;
     color: var(--muted);
-    margin-bottom: 0.5rem;
+    margin-bottom: 0.25rem;
     padding-bottom: 0.5rem;
     border-bottom: 1px solid var(--border);
+    flex-shrink: 0;
+  }
+
+  .sidebar-sep {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin: 0.4rem 0;
+    flex-shrink: 0;
+  }
+
+  .sidebar-sep::before,
+  .sidebar-sep::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: var(--border);
+  }
+
+  .sidebar-sep span {
+    font-size: 0.52rem;
+    text-transform: uppercase;
+    letter-spacing: 0.2em;
+    color: var(--accent);
+    white-space: nowrap;
   }
 
   .algo-btn {
@@ -557,7 +582,7 @@
 
 <div class="main">
   <aside class="sidebar">
-    <div class="sidebar-label">Pick an algorithm</div>
+    <div class="sidebar-label">efficient</div>
     <!-- Buttons injected by JS -->
   </aside>
 
@@ -1833,7 +1858,31 @@ function renderCode(key) {
 
 function buildSidebar() {
   const sidebar = document.querySelector('.sidebar');
-  Object.entries(ALGORITHMS).forEach(([key, algo]) => {
+  const LEGIT = ['mergesort', 'quicksort'];
+
+  const legit = Object.entries(ALGORITHMS).filter(([k]) => LEGIT.includes(k));
+  const unconventional = Object.entries(ALGORITHMS)
+    .filter(([k]) => !LEGIT.includes(k))
+    .sort(([, a], [, b]) => a.name.localeCompare(b.name));
+
+  // Add "efficient" label + legit sorts
+  legit.forEach(([key, algo]) => {
+    const btn = document.createElement('button');
+    btn.className = 'algo-btn' + (key === currentAlgo ? ' active' : '');
+    btn.dataset.key = key;
+    btn.innerHTML = `<span class="algo-name">${algo.name}</span><span class="complexity">${algo.complexity}</span>`;
+    btn.addEventListener('click', () => selectAlgo(key));
+    sidebar.appendChild(btn);
+  });
+
+  // Divider
+  const sep = document.createElement('div');
+  sep.className = 'sidebar-sep';
+  sep.innerHTML = '<span>unconventional</span>';
+  sidebar.appendChild(sep);
+
+  // Unconventional sorts A-Z
+  unconventional.forEach(([key, algo]) => {
     const btn = document.createElement('button');
     btn.className = 'algo-btn' + (key === currentAlgo ? ' active' : '');
     btn.dataset.key = key;
