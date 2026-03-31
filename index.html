@@ -531,11 +531,29 @@
       border-bottom: 1px solid var(--border);
       padding: 0.75rem 0.75rem;
       gap: 0.5rem;
-      /* Stop page scroll interfering */
       overscroll-behavior-x: contain;
     }
 
     .sidebar-label { display: none; }
+
+    /* On mobile: slim vertical divider instead of full-width label */
+    .sidebar-sep {
+      flex-direction: column;
+      width: 1px;
+      height: auto;
+      margin: 0 0.25rem;
+      align-self: stretch;
+      gap: 0;
+    }
+
+    .sidebar-sep::before,
+    .sidebar-sep::after {
+      width: 1px;
+      height: 100%;
+      flex: 1;
+    }
+
+    .sidebar-sep span { display: none; }
 
     .algo-btn {
       min-width: 120px;
