@@ -985,13 +985,209 @@ const ALGORITHMS = {
           : `${purged} purged. ${survivors.length} remain — not sorted. As expected.`
       };
     }
+  },
+
+  communism: {
+    name: 'Communism Sort',
+    complexity: 'O(n²) redistributions',
+    desc: 'Each bar shares its wealth with poorer neighbours, giving the most to the neediest. Repeated passes until all are equal — true communism. The array ends up flat.',
+    analysis: {
+      best:    { value: 'O(n)',  note: 'If all elements are already equal, a single pass confirms nothing needs redistributing.' },
+      average: { value: 'O(n²)', note: 'Each pass moves value from rich to poor neighbours. Many passes are needed before the array fully levels out.' },
+      worst:   { value: 'O(n²)', note: 'Maximally unequal input (e.g. [1, n]) requires the most passes to fully redistribute across all positions.' },
+      space:   { value: 'O(1)', note: 'All redistribution happens in-place. No auxiliary storage required.' },
+      stability: 'N/A',
+      practical: 1,
+      practicalNote: 'Does not sort — it equalises. Every element converges to the mean, destroying all information in the original data. Ideologically pure, computationally pointless.'
+    },
+    async* run(arr, mark) {
+      const n = arr.length;
+      const total = arr.reduce((a, b) => a + b, 0);
+      const mean = total / n;
+      yield { type: 'start', msg: `Total wealth: ${total}. Equal share per element: ${mean.toFixed(2)}. Redistributing...` };
+
+      let passes = 0;
+      let changed = true;
+      while (changed) {
+        changed = false;
+        passes++;
+        for (let i = 0; i < n - 1; i++) {
+          if (arr[i] > arr[i + 1]) {
+            // Rich gives to poor neighbour
+            const give = Math.ceil((arr[i] - arr[i + 1]) / 2);
+            arr[i] -= give;
+            arr[i + 1] += give;
+            changed = true;
+            yield { type: 'swap', l: i, h: i + 1, msg: `[${i}] gives ${give} to [${i+1}]. Now ${arr[i]} and ${arr[i+1]}.` };
+          } else {
+            yield { type: 'compare', l: i, h: i + 1, msg: `[${i}]=${arr[i]} already no richer than [${i+1}]=${arr[i+1]}.` };
+          }
+        }
+        if (passes > 300) { yield { type: 'bail', msg: 'Redistribution stalled. Declaring equality by decree.' }; break; }
+      }
+      yield { type: 'done', msg: `Redistribution complete after ${passes} passes. All elements equalised.` };
+    }
+  },
+
+  gamble: {
+    name: 'Gamble Sort',
+    complexity: 'O(n² x luck)',
+    desc: 'Pick two random elements. Roll three dice. If you roll three of a kind, fully sort those two. If two match, swap them. Otherwise revert. Pray for jackpot.',
+    analysis: {
+      best:    { value: 'O(n²)', note: 'With perfect luck, every roll is a jackpot and pairs get sorted immediately. Still O(n²) pairs to resolve.' },
+      average: { value: 'O(∞)',  note: 'Each roll has only a small chance of doing useful work. Expected number of rolls to sort grows astronomically with n.' },
+      worst:   { value: 'O(∞)',  note: 'Could theoretically never sort if the dice perpetually refuse to cooperate. The house always wins.' },
+      space:   { value: 'O(1)', note: 'In-place. Only needs two indices and three dice values.' },
+      stability: 'Unstable',
+      practical: 1,
+      practicalNote: 'The only sorting algorithm that requires both a computer and a casino. Combines the unreliability of Bogo Sort with the drama of a slot machine. Not recommended for production.'
+    },
+    async* run(arr, mark) {
+      const n = arr.length;
+      function isSorted(a) { for (let i = 0; i < a.length - 1; i++) if (a[i] > a[i+1]) return false; return true; }
+      function roll() { return Math.floor(Math.random() * 6) + 1; }
+
+      let attempts = 0;
+      yield { type: 'start', msg: 'Stepping up to the table... 🎲' };
+
+      while (!isSorted(arr) && attempts < 1500) {
+        attempts++;
+        const i = Math.floor(Math.random() * n);
+        const j = Math.floor(Math.random() * n);
+        if (i === j) continue;
+
+        const dice = [roll(), roll(), roll()];
+        const ones = dice.filter(d => d === dice[0]).length;
+
+        yield { type: 'compare', l: i, h: j, msg: `Rolled [${dice.join(', ')}] on indices ${i} & ${j}` };
+
+        if (ones === 3) {
+          // Jackpot — properly place the smaller one
+          if (arr[i] > arr[j]) { [arr[i], arr[j]] = [arr[j], arr[i]]; }
+          yield { type: 'swap', l: i, h: j, msg: `JACKPOT! Three ${dice[0]}s — sorted pair (${arr[i]}, ${arr[j]})` };
+        } else if (ones >= 2) {
+          // Two matching — simple swap
+          [arr[i], arr[j]] = [arr[j], arr[i]];
+          yield { type: 'swap', l: i, h: j, msg: `Two ${dice[0]}s — swapped indices ${i} & ${j}` };
+        } else {
+          yield { type: 'check', msg: `No match — revert. House wins this round.` };
+        }
+
+        if (attempts > 1500) { yield { type: 'bail', msg: 'Ran out of chips after 1500 rolls.' }; break; }
+      }
+
+      if (isSorted(arr)) {
+        yield { type: 'done', msg: `Sorted after ${attempts} rolls! The house lost today.` };
+      } else {
+        arr.sort((a, b) => a - b);
+        yield { type: 'done', msg: `Gave up after ${attempts} rolls. Sorted manually. The house always wins.` };
+      }
+    }
+  },
+
+  adhd: {
+    name: 'ADHD Sort',
+    complexity: 'O(n² + distractions)',
+    desc: 'Sorts a few elements, then gets distracted and makes a random swap. Then sorts a bit more. Then gets distracted again. Eventual convergence not guaranteed.',
+    analysis: {
+      best:    { value: 'O(n²)', note: 'If distraction swaps happen to never undo progress, it degrades to a noisy selection sort. Optimistic.' },
+      average: { value: 'O(n² + distractions)', note: 'Each distraction undoes some sorting work, increasing the total number of passes needed. The more distractible, the longer it takes.' },
+      worst:   { value: 'O(∞)',  note: 'If distractions consistently undo sorted regions, the algorithm may never converge. Relatable.' },
+      space:   { value: 'O(1)', note: 'In-place. The chaos requires no auxiliary memory, only poor impulse control.' },
+      stability: 'Unstable',
+      practical: 1,
+      practicalNote: 'A metaphor in code form. Does real sorting work interrupted by random chaos. Will eventually sort with enough patience, but the journey is exhausting to watch.'
+    },
+    async* run(arr, mark) {
+      const n = arr.length;
+      function isSorted(a) { for (let i = 0; i < a.length - 1; i++) if (a[i] > a[i+1]) return false; return true; }
+
+      let ops = 0;
+      let sorted = 0;
+      yield { type: 'start', msg: 'Starting to sort... oh wait, what was I doing?' };
+
+      while (!isSorted(arr) && ops < 2000) {
+        // Do some real sorting work
+        for (let j = sorted + 1; j < n; j++) {
+          if (arr[j] < arr[sorted]) {
+            yield { type: 'compare', l: sorted, h: j, msg: `Focusing: comparing ${arr[sorted]} and ${arr[j]}` };
+            [arr[sorted], arr[j]] = [arr[j], arr[sorted]];
+            ops++;
+            yield { type: 'swap', l: sorted, h: j, msg: `Swapped. Making progress!` };
+          }
+        }
+        sorted++;
+
+        // Get distracted with 40% probability
+        if (Math.random() < 0.4 && sorted < n - 1) {
+          const a = Math.floor(Math.random() * n);
+          const b = Math.floor(Math.random() * n);
+          [arr[a], arr[b]] = [arr[b], arr[a]];
+          ops++;
+          sorted = Math.max(0, sorted - 1);
+          yield { type: 'swap', l: a, h: b, msg: `Oh look, something shiny! Random swap at ${a} & ${b}. Lost focus.` };
+        }
+      }
+
+      if (isSorted(arr)) {
+        yield { type: 'done', msg: `Finally sorted after ${ops} operations. Took a while but we got there.` };
+      } else {
+        arr.sort((a, b) => a - b);
+        yield { type: 'done', msg: `Too many distractions. Sorted manually after ${ops} ops.` };
+      }
+    }
+  },
+
+  anxiety: {
+    name: 'Anxiety Sort',
+    complexity: 'O(n² + paranoia)',
+    desc: 'Sorts the array correctly on the first pass. Then checks it is still sorted. Then checks again. And again. Cannot stop checking. What if it changed?',
+    analysis: {
+      best:    { value: 'O(n log n)', note: 'The initial sort is a proper O(n log n). If the anxiety check count is fixed and small, that dominates.' },
+      average: { value: 'O(n² + paranoia)', note: 'After sorting, it runs n repeated O(n) verification passes. The more anxious, the more passes, the worse the constant.' },
+      worst:   { value: 'O(∞)',       note: 'If the check count is unbounded, the algorithm never terminates — perpetually verifying a sorted array that has not changed and never will.' },
+      space:   { value: 'O(1)', note: 'No extra memory needed for the verification passes. The anxiety is purely psychological.' },
+      stability: 'Stable',
+      practical: 2,
+      practicalNote: 'Technically correct — the best kind of correct. But wildly inefficient due to compulsive re-verification. A good metaphor for over-engineered validation logic in production systems.'
+    },
+    async* run(arr, mark) {
+      const n = arr.length;
+      yield { type: 'start', msg: 'Sorting array... this should be straightforward.' };
+
+      // Actually sort it properly first
+      arr.sort((a, b) => a - b);
+      yield { type: 'recurse', l: 0, h: n - 1, msg: 'Sorted. Done. ...but what if it is not actually sorted?' };
+
+      // Now compulsively re-verify
+      const CHECK_PASSES = 20;
+      for (let pass = 1; pass <= CHECK_PASSES; pass++) {
+        let panic = false;
+        for (let i = 0; i < n - 1; i++) {
+          yield { type: 'compare', l: i, h: i + 1, msg: `Check #${pass}: verifying ${arr[i]} <= ${arr[i+1]}...` };
+          if (arr[i] > arr[i + 1]) {
+            panic = true;
+            yield { type: 'swap', l: i, h: i + 1, msg: `PANIC! Out of order at ${i}! Re-sorting!` };
+            arr.sort((a, b) => a - b);
+            break;
+          }
+        }
+        if (!panic) {
+          if (pass < CHECK_PASSES) {
+            yield { type: 'check', msg: `Pass ${pass} confirmed sorted. ...but what if something changed since last time?` };
+          }
+        }
+      }
+
+      yield { type: 'done', msg: `Verified sorted ${CHECK_PASSES} times. It is sorted. It was always sorted. Please believe that it is sorted.` };
+    }
   }
 };
 
 // ─── STATE ────────────────────────────────────────────────────────────────────
 
 // Algorithms where we can meaningfully track confirmed-sorted positions live
-const POSITIONAL_ALGOS = new Set(['gnome', 'pancake', 'stooge', 'mergesort', 'quicksort']);
+const POSITIONAL_ALGOS = new Set(['gnome', 'pancake', 'stooge', 'mergesort', 'quicksort', 'anxiety', 'adhd']);
 
 let currentAlgo = 'mergesort';
 let arr = [];
