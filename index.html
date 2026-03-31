@@ -1279,11 +1279,11 @@ const ALGORITHMS = {
       let sorted = 0;
       yield { type: 'start', msg: 'Starting to sort... oh wait, what was I doing?' };
 
-      while (!isSorted(arr) && ops < 2000) {
-        // Do some real sorting work
+      while (!isSorted(arr) && ops < 3000) {
+        // Do some real sorting work — yield on every comparison to avoid blocking
         for (let j = sorted + 1; j < n; j++) {
+          yield { type: 'compare', l: sorted, h: j, msg: `Focusing: comparing ${arr[sorted]} and ${arr[j]}` };
           if (arr[j] < arr[sorted]) {
-            yield { type: 'compare', l: sorted, h: j, msg: `Focusing: comparing ${arr[sorted]} and ${arr[j]}` };
             [arr[sorted], arr[j]] = [arr[j], arr[sorted]];
             ops++;
             yield { type: 'swap', l: sorted, h: j, msg: `Swapped. Making progress!` };
