@@ -1273,40 +1273,48 @@ const ALGORITHMS = {
     },
     async* run(arr, mark) {
       const n = arr.length;
-      function isSorted(a) { for (let i = 0; i < a.length - 1; i++) if (a[i] > a[i+1]) return false; return true; }
-
       let ops = 0;
-      let sorted = 0;
+      let pass = 0;
+      let sortedCount = 0;
+
       yield { type: 'start', msg: 'Starting to sort... oh wait, what was I doing?' };
 
-      while (!isSorted(arr) && ops < 3000) {
-        // Do some real sorting work — yield on every comparison to avoid blocking
-        for (let j = sorted + 1; j < n; j++) {
-          yield { type: 'compare', l: sorted, h: j, msg: `Focusing: comparing ${arr[sorted]} and ${arr[j]}` };
-          if (arr[j] < arr[sorted]) {
-            [arr[sorted], arr[j]] = [arr[j], arr[sorted]];
+      while (sortedCount < n - 1 && ops < 4000) {
+        pass++;
+        let swapped = false;
+
+        // One bubble pass — yields every comparison so can never block
+        for (let j = 0; j < n - 1 - sortedCount; j++) {
+          if (stopFlag) return;
+          yield { type: 'compare', l: j, h: j + 1, msg: `Pass ${pass}: comparing pos ${j} and ${j+1}` };
+          if (arr[j] > arr[j + 1]) {
+            [arr[j], arr[j + 1]] = [arr[j + 1], arr[j]];
             ops++;
-            yield { type: 'swap', l: sorted, h: j, msg: `Swapped. Making progress!` };
+            swapped = true;
+            yield { type: 'swap', l: j, h: j + 1, msg: `Swapped ${arr[j+1]} and ${arr[j]}` };
           }
         }
-        sorted++;
 
-        // Get distracted with 40% probability
-        if (Math.random() < 0.4 && sorted < n - 1) {
+        if (!swapped) break; // already sorted
+        sortedCount++;
+
+        // 40% chance of distraction between passes
+        if (Math.random() < 0.4) {
           const a = Math.floor(Math.random() * n);
           const b = Math.floor(Math.random() * n);
           [arr[a], arr[b]] = [arr[b], arr[a]];
           ops++;
-          sorted = Math.max(0, sorted - 1);
-          yield { type: 'swap', l: a, h: b, msg: `Oh look, something shiny! Random swap at ${a} & ${b}. Lost focus.` };
+          sortedCount = Math.max(0, sortedCount - 2);
+          yield { type: 'swap', l: a, h: b, msg: `Oh look, something shiny! Distracted — random swap at ${a} & ${b}.` };
         }
       }
 
-      if (isSorted(arr)) {
-        yield { type: 'done', msg: `Finally sorted after ${ops} operations. Took a while but we got there.` };
+      const sorted = arr.every((v, i, a) => i === 0 || a[i-1] <= v);
+      if (sorted) {
+        yield { type: 'done', msg: `Finally sorted after ${ops} operations across ${pass} passes.` };
       } else {
         arr.sort((a, b) => a - b);
-        yield { type: 'done', msg: `Too many distractions. Sorted manually after ${ops} ops.` };
+        yield { type: 'done', msg: `Too many distractions after ${ops} ops. Sorted manually.` };
       }
     }
   },
