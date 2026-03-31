@@ -285,6 +285,61 @@
 
   .rating-pip.on { background: var(--accent); }
 
+  /* ── Code Panel ─────────────────────────────────────── */
+  .code-wrap {
+    width: 100%;
+    border-top: 1px solid var(--border);
+    background: rgba(255,255,255,0.015);
+  }
+
+  .code-wrap[open] .analysis-chevron { transform: rotate(180deg); }
+
+  .code-toggle {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0.6rem 2rem;
+    cursor: pointer;
+    list-style: none;
+    font-size: 0.6rem;
+    text-transform: uppercase;
+    letter-spacing: 0.18em;
+    color: var(--muted);
+    user-select: none;
+    transition: color 0.15s;
+  }
+
+  .code-toggle::-webkit-details-marker { display: none; }
+  .code-toggle:hover { color: var(--text); }
+
+  .code-panel {
+    border-top: 1px solid var(--border);
+    background: #1e1e2e;
+    padding: 1.25rem 1.5rem;
+    overflow-x: auto;
+  }
+
+  .code-block {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.78rem;
+    line-height: 1.7;
+    margin: 0;
+    white-space: pre;
+    color: #cdd6f4;
+  }
+
+  /* PyCharm Darcula-inspired token colours */
+  .tok-kw     { color: #cba6f7; }  /* keyword: def, return, while, if, for, in, not */
+  .tok-fn     { color: #89b4fa; }  /* function name */
+  .tok-bi     { color: #89dceb; }  /* builtin: len, range, print, sorted */
+  .tok-str    { color: #a6e3a1; }  /* strings */
+  .tok-num    { color: #fab387; }  /* numbers */
+  .tok-cm     { color: #585b70; font-style: italic; }  /* comments */
+  .tok-op     { color: #89dceb; }  /* operators: =, -, +, *, // */
+  .tok-punc   { color: #cdd6f4; }  /* punctuation: () [] : , */
+  .tok-self   { color: #f38ba8; }  /* not used here but handy */
+  .tok-bool   { color: #fab387; }  /* True, False, None */
+
   .controls {
     display: flex;
     gap: 0.75rem;
@@ -561,6 +616,16 @@
       <div class="log" id="log">
         <span class="log-line">// Select an algorithm and press Sort</span>
       </div>
+
+      <details class="code-wrap">
+        <summary class="code-toggle">
+          <span>Python Implementation</span>
+          <span class="analysis-chevron">▾</span>
+        </summary>
+        <div class="code-panel">
+          <pre class="code-block" id="codeBlock"></pre>
+        </div>
+      </details>
     </div>
   </section>
 </div>
@@ -1537,6 +1602,235 @@ function renderAnalysis(key) {
   `;
 }
 
+const PYTHON_CODE = {
+  mergesort: `\
+def merge_sort(arr):
+    <span class="tok-kw">if</span> <span class="tok-bi">len</span>(arr) <span class="tok-op">&lt;=</span> <span class="tok-num">1</span>:
+        <span class="tok-kw">return</span> arr
+
+    mid <span class="tok-op">=</span> <span class="tok-bi">len</span>(arr) <span class="tok-op">//</span> <span class="tok-num">2</span>
+    left  <span class="tok-op">=</span> merge_sort(arr[<span class="tok-op">:</span>mid])
+    right <span class="tok-op">=</span> merge_sort(arr[mid<span class="tok-op">:</span>])
+    <span class="tok-kw">return</span> merge(left, right)
+
+<span class="tok-kw">def</span> <span class="tok-fn">merge</span>(left, right):
+    result <span class="tok-op">=</span> []
+    i <span class="tok-op">=</span> j <span class="tok-op">=</span> <span class="tok-num">0</span>
+    <span class="tok-kw">while</span> i <span class="tok-op">&lt;</span> <span class="tok-bi">len</span>(left) <span class="tok-kw">and</span> j <span class="tok-op">&lt;</span> <span class="tok-bi">len</span>(right):
+        <span class="tok-kw">if</span> left[i] <span class="tok-op">&lt;=</span> right[j]:
+            result.append(left[i])
+            i <span class="tok-op">+=</span> <span class="tok-num">1</span>
+        <span class="tok-kw">else</span>:
+            result.append(right[j])
+            j <span class="tok-op">+=</span> <span class="tok-num">1</span>
+    result.extend(left[i<span class="tok-op">:</span>])
+    result.extend(right[j<span class="tok-op">:</span>])
+    <span class="tok-kw">return</span> result`,
+
+  quicksort: `\
+<span class="tok-kw">def</span> <span class="tok-fn">quick_sort</span>(arr):
+    <span class="tok-kw">if</span> <span class="tok-bi">len</span>(arr) <span class="tok-op">&lt;=</span> <span class="tok-num">1</span>:
+        <span class="tok-kw">return</span> arr
+    pivot <span class="tok-op">=</span> arr[<span class="tok-bi">len</span>(arr) <span class="tok-op">//</span> <span class="tok-num">2</span>]
+    left  <span class="tok-op">=</span> [x <span class="tok-kw">for</span> x <span class="tok-kw">in</span> arr <span class="tok-kw">if</span> x <span class="tok-op">&lt;</span>  pivot]
+    mid   <span class="tok-op">=</span> [x <span class="tok-kw">for</span> x <span class="tok-kw">in</span> arr <span class="tok-kw">if</span> x <span class="tok-op">==</span> pivot]
+    right <span class="tok-op">=</span> [x <span class="tok-kw">for</span> x <span class="tok-kw">in</span> arr <span class="tok-kw">if</span> x <span class="tok-op">&gt;</span>  pivot]
+    <span class="tok-kw">return</span> quick_sort(left) <span class="tok-op">+</span> mid <span class="tok-op">+</span> quick_sort(right)`,
+
+  bogo: `\
+<span class="tok-kw">import</span> random
+
+<span class="tok-kw">def</span> <span class="tok-fn">bogo_sort</span>(arr):
+    <span class="tok-kw">while not</span> is_sorted(arr):
+        random.shuffle(arr)
+    <span class="tok-kw">return</span> arr
+
+<span class="tok-kw">def</span> <span class="tok-fn">is_sorted</span>(arr):
+    <span class="tok-kw">return</span> <span class="tok-bi">all</span>(arr[i] <span class="tok-op">&lt;=</span> arr[i <span class="tok-op">+</span> <span class="tok-num">1</span>]
+                <span class="tok-kw">for</span> i <span class="tok-kw">in</span> <span class="tok-bi">range</span>(<span class="tok-bi">len</span>(arr) <span class="tok-op">-</span> <span class="tok-num">1</span>))`,
+
+  stalin: `\
+<span class="tok-kw">def</span> <span class="tok-fn">stalin_sort</span>(arr):
+    <span class="tok-cm"># Keep only elements that are >= the previous kept element</span>
+    result <span class="tok-op">=</span> [arr[<span class="tok-num">0</span>]]
+    <span class="tok-kw">for</span> x <span class="tok-kw">in</span> arr[<span class="tok-num">1</span><span class="tok-op">:</span>]:
+        <span class="tok-kw">if</span> x <span class="tok-op">&gt;=</span> result[<span class="tok-op">-</span><span class="tok-num">1</span>]:
+            result.append(x)
+        <span class="tok-cm"># else: element is eliminated, never to be seen again</span>
+    <span class="tok-kw">return</span> result`,
+
+  thanos: `\
+<span class="tok-kw">def</span> <span class="tok-fn">thanos_sort</span>(arr):
+    <span class="tok-kw">def</span> <span class="tok-fn">is_sorted</span>(a):
+        <span class="tok-kw">return</span> <span class="tok-bi">all</span>(a[i] <span class="tok-op">&lt;=</span> a[i<span class="tok-op">+</span><span class="tok-num">1</span>] <span class="tok-kw">for</span> i <span class="tok-kw">in</span> <span class="tok-bi">range</span>(<span class="tok-bi">len</span>(a)<span class="tok-op">-</span><span class="tok-num">1</span>))
+
+    <span class="tok-kw">while not</span> is_sorted(arr) <span class="tok-kw">and</span> <span class="tok-bi">len</span>(arr) <span class="tok-op">&gt;</span> <span class="tok-num">1</span>:
+        half <span class="tok-op">=</span> <span class="tok-bi">len</span>(arr) <span class="tok-op">//</span> <span class="tok-num">2</span>
+        <span class="tok-cm"># Snap away the largest half</span>
+        arr <span class="tok-op">=</span> <span class="tok-bi">sorted</span>(arr)[<span class="tok-op">:</span>half]
+
+    <span class="tok-kw">return</span> arr  <span class="tok-cm"># Perfectly balanced</span>`,
+
+  sleep: `\
+<span class="tok-kw">import</span> threading
+
+<span class="tok-kw">def</span> <span class="tok-fn">sleep_sort</span>(arr):
+    result <span class="tok-op">=</span> []
+    threads <span class="tok-op">=</span> []
+
+    <span class="tok-kw">def</span> <span class="tok-fn">append_after</span>(val):
+        <span class="tok-kw">import</span> time
+        time.sleep(val <span class="tok-op">*</span> <span class="tok-num">0.01</span>)
+        result.append(val)
+
+    <span class="tok-kw">for</span> val <span class="tok-kw">in</span> arr:
+        t <span class="tok-op">=</span> threading.Thread(target<span class="tok-op">=</span>append_after, args<span class="tok-op">=</span>(val,))
+        threads.append(t)
+        t.start()
+
+    <span class="tok-kw">for</span> t <span class="tok-kw">in</span> threads:
+        t.join()
+
+    <span class="tok-kw">return</span> result`,
+
+  miracle: `\
+<span class="tok-kw">def</span> <span class="tok-fn">miracle_sort</span>(arr):
+    <span class="tok-cm"># Check if sorted. If not, wait for cosmic rays</span>
+    <span class="tok-cm"># to flip bits in memory until it becomes sorted.</span>
+    <span class="tok-kw">while not</span> <span class="tok-bi">all</span>(arr[i] <span class="tok-op">&lt;=</span> arr[i<span class="tok-op">+</span><span class="tok-num">1</span>]
+                    <span class="tok-kw">for</span> i <span class="tok-kw">in</span> <span class="tok-bi">range</span>(<span class="tok-bi">len</span>(arr)<span class="tok-op">-</span><span class="tok-num">1</span>)):
+        <span class="tok-kw">pass</span>  <span class="tok-cm"># just wait :)</span>
+    <span class="tok-kw">return</span> arr`,
+
+  gnome: `\
+<span class="tok-kw">def</span> <span class="tok-fn">gnome_sort</span>(arr):
+    pos <span class="tok-op">=</span> <span class="tok-num">0</span>
+    <span class="tok-kw">while</span> pos <span class="tok-op">&lt;</span> <span class="tok-bi">len</span>(arr):
+        <span class="tok-kw">if</span> pos <span class="tok-op">==</span> <span class="tok-num">0</span> <span class="tok-kw">or</span> arr[pos] <span class="tok-op">&gt;=</span> arr[pos <span class="tok-op">-</span> <span class="tok-num">1</span>]:
+            pos <span class="tok-op">+=</span> <span class="tok-num">1</span>  <span class="tok-cm"># gnome moves forward</span>
+        <span class="tok-kw">else</span>:
+            arr[pos], arr[pos <span class="tok-op">-</span> <span class="tok-num">1</span>] <span class="tok-op">=</span> arr[pos <span class="tok-op">-</span> <span class="tok-num">1</span>], arr[pos]
+            pos <span class="tok-op">-=</span> <span class="tok-num">1</span>  <span class="tok-cm"># gnome steps back</span>
+    <span class="tok-kw">return</span> arr`,
+
+  stooge: `\
+<span class="tok-kw">def</span> <span class="tok-fn">stooge_sort</span>(arr, l<span class="tok-op">=</span><span class="tok-num">0</span>, h<span class="tok-op">=</span><span class="tok-bool">None</span>):
+    <span class="tok-kw">if</span> h <span class="tok-kw">is</span> <span class="tok-bool">None</span>:
+        h <span class="tok-op">=</span> <span class="tok-bi">len</span>(arr) <span class="tok-op">-</span> <span class="tok-num">1</span>
+    <span class="tok-kw">if</span> arr[l] <span class="tok-op">&gt;</span> arr[h]:
+        arr[l], arr[h] <span class="tok-op">=</span> arr[h], arr[l]
+    <span class="tok-kw">if</span> h <span class="tok-op">-</span> l <span class="tok-op">+</span> <span class="tok-num">1</span> <span class="tok-op">&gt;</span> <span class="tok-num">2</span>:
+        t <span class="tok-op">=</span> (h <span class="tok-op">-</span> l <span class="tok-op">+</span> <span class="tok-num">1</span>) <span class="tok-op">//</span> <span class="tok-num">3</span>
+        stooge_sort(arr, l,     h <span class="tok-op">-</span> t)
+        stooge_sort(arr, l <span class="tok-op">+</span> t, h    )
+        stooge_sort(arr, l,     h <span class="tok-op">-</span> t)
+    <span class="tok-kw">return</span> arr`,
+
+  pancake: `\
+<span class="tok-kw">def</span> <span class="tok-fn">pancake_sort</span>(arr):
+    <span class="tok-kw">def</span> <span class="tok-fn">flip</span>(a, k):
+        a[<span class="tok-op">:</span>k<span class="tok-op">+</span><span class="tok-num">1</span>] <span class="tok-op">=</span> a[<span class="tok-op">:</span>k<span class="tok-op">+</span><span class="tok-num">1</span>][<span class="tok-op">::-</span><span class="tok-num">1</span>]
+
+    <span class="tok-kw">for</span> size <span class="tok-kw">in</span> <span class="tok-bi">range</span>(<span class="tok-bi">len</span>(arr), <span class="tok-num">1</span>, <span class="tok-op">-</span><span class="tok-num">1</span>):
+        max_idx <span class="tok-op">=</span> arr.index(<span class="tok-bi">max</span>(arr[<span class="tok-op">:</span>size]))
+        <span class="tok-kw">if</span> max_idx <span class="tok-op">!=</span> size <span class="tok-op">-</span> <span class="tok-num">1</span>:
+            <span class="tok-kw">if</span> max_idx <span class="tok-op">!=</span> <span class="tok-num">0</span>:
+                flip(arr, max_idx)
+            flip(arr, size <span class="tok-op">-</span> <span class="tok-num">1</span>)
+    <span class="tok-kw">return</span> arr`,
+
+  genghis: `\
+<span class="tok-kw">def</span> <span class="tok-fn">genghis_sort</span>(arr):
+    <span class="tok-cm"># Conquer. Keep only the first. Repopulate.</span>
+    first <span class="tok-op">=</span> arr[<span class="tok-num">0</span>]
+    n     <span class="tok-op">=</span> <span class="tok-bi">len</span>(arr)
+    <span class="tok-kw">return</span> [first <span class="tok-op">+</span> i <span class="tok-kw">for</span> i <span class="tok-kw">in</span> <span class="tok-bi">range</span>(n)]`,
+
+  oddpurge: `\
+<span class="tok-kw">def</span> <span class="tok-fn">odd_purge_sort</span>(arr):
+    <span class="tok-cm"># Keep only even-indexed elements.</span>
+    <span class="tok-cm"># May or may not be sorted. Nobody promised anything.</span>
+    <span class="tok-kw">return</span> [arr[i] <span class="tok-kw">for</span> i <span class="tok-kw">in</span> <span class="tok-bi">range</span>(<span class="tok-bi">len</span>(arr)) <span class="tok-kw">if</span> i <span class="tok-op">%</span> <span class="tok-num">2</span> <span class="tok-op">==</span> <span class="tok-num">0</span>]`,
+
+  communism: `\
+<span class="tok-kw">def</span> <span class="tok-fn">communism_sort</span>(arr):
+    <span class="tok-cm"># Each element shares with its poorer neighbour</span>
+    <span class="tok-cm"># until all wealth is equal.</span>
+    changed <span class="tok-op">=</span> <span class="tok-bool">True</span>
+    <span class="tok-kw">while</span> changed:
+        changed <span class="tok-op">=</span> <span class="tok-bool">False</span>
+        <span class="tok-kw">for</span> i <span class="tok-kw">in</span> <span class="tok-bi">range</span>(<span class="tok-bi">len</span>(arr) <span class="tok-op">-</span> <span class="tok-num">1</span>):
+            <span class="tok-kw">if</span> arr[i] <span class="tok-op">&gt;</span> arr[i <span class="tok-op">+</span> <span class="tok-num">1</span>]:
+                give <span class="tok-op">=</span> (arr[i] <span class="tok-op">-</span> arr[i <span class="tok-op">+</span> <span class="tok-num">1</span>]) <span class="tok-op">//</span> <span class="tok-num">2</span>
+                arr[i]     <span class="tok-op">-=</span> give
+                arr[i <span class="tok-op">+</span> <span class="tok-num">1</span>] <span class="tok-op">+=</span> give
+                changed <span class="tok-op">=</span> <span class="tok-bool">True</span>
+    <span class="tok-kw">return</span> arr`,
+
+  gamble: `\
+<span class="tok-kw">import</span> random
+
+<span class="tok-kw">def</span> <span class="tok-fn">gamble_sort</span>(arr):
+    <span class="tok-kw">def</span> <span class="tok-fn">is_sorted</span>(a):
+        <span class="tok-kw">return</span> <span class="tok-bi">all</span>(a[i]<span class="tok-op">&lt;=</span>a[i<span class="tok-op">+</span><span class="tok-num">1</span>] <span class="tok-kw">for</span> i <span class="tok-kw">in</span> <span class="tok-bi">range</span>(<span class="tok-bi">len</span>(a)<span class="tok-op">-</span><span class="tok-num">1</span>))
+
+    <span class="tok-kw">while not</span> is_sorted(arr):
+        i, j <span class="tok-op">=</span> random.sample(<span class="tok-bi">range</span>(<span class="tok-bi">len</span>(arr)), <span class="tok-num">2</span>)
+        dice <span class="tok-op">=</span> [random.randint(<span class="tok-num">1</span>, <span class="tok-num">6</span>) <span class="tok-kw">for</span> _ <span class="tok-kw">in</span> <span class="tok-bi">range</span>(<span class="tok-num">3</span>)]
+        ones <span class="tok-op">=</span> dice.count(dice[<span class="tok-num">0</span>])
+        <span class="tok-kw">if</span> ones <span class="tok-op">==</span> <span class="tok-num">3</span>:  <span class="tok-cm"># jackpot</span>
+            <span class="tok-kw">if</span> arr[i] <span class="tok-op">&gt;</span> arr[j]:
+                arr[i], arr[j] <span class="tok-op">=</span> arr[j], arr[i]
+        <span class="tok-kw">elif</span> ones <span class="tok-op">&gt;=</span> <span class="tok-num">2</span>:
+            arr[i], arr[j] <span class="tok-op">=</span> arr[j], arr[i]
+    <span class="tok-kw">return</span> arr`,
+
+  adhd: `\
+<span class="tok-kw">import</span> random
+
+<span class="tok-kw">def</span> <span class="tok-fn">adhd_sort</span>(arr):
+    n, i <span class="tok-op">=</span> <span class="tok-bi">len</span>(arr), <span class="tok-num">0</span>
+    <span class="tok-kw">while</span> i <span class="tok-op">&lt;</span> n:
+        <span class="tok-cm"># Do some real work</span>
+        <span class="tok-kw">for</span> j <span class="tok-kw">in</span> <span class="tok-bi">range</span>(i <span class="tok-op">+</span> <span class="tok-num">1</span>, n):
+            <span class="tok-kw">if</span> arr[j] <span class="tok-op">&lt;</span> arr[i]:
+                arr[i], arr[j] <span class="tok-op">=</span> arr[j], arr[i]
+        i <span class="tok-op">+=</span> <span class="tok-num">1</span>
+        <span class="tok-cm"># Get distracted</span>
+        <span class="tok-kw">if</span> random.random() <span class="tok-op">&lt;</span> <span class="tok-num">0.4</span> <span class="tok-kw">and</span> i <span class="tok-op">&lt;</span> n <span class="tok-op">-</span> <span class="tok-num">1</span>:
+            a, b <span class="tok-op">=</span> random.randrange(n), random.randrange(n)
+            arr[a], arr[b] <span class="tok-op">=</span> arr[b], arr[a]
+            i <span class="tok-op">=</span> <span class="tok-bi">max</span>(<span class="tok-num">0</span>, i <span class="tok-op">-</span> <span class="tok-num">1</span>)  <span class="tok-cm"># lost focus</span>
+    <span class="tok-kw">return</span> arr`,
+
+  anxiety: `\
+<span class="tok-kw">def</span> <span class="tok-fn">anxiety_sort</span>(arr):
+    arr.sort()  <span class="tok-cm"># done!</span>
+
+    <span class="tok-cm"># ...but what if it's not actually sorted?</span>
+    checks <span class="tok-op">=</span> <span class="tok-num">0</span>
+    <span class="tok-kw">while</span> checks <span class="tok-op">&lt;</span> <span class="tok-num">20</span>:
+        <span class="tok-kw">for</span> i <span class="tok-kw">in</span> <span class="tok-bi">range</span>(<span class="tok-bi">len</span>(arr) <span class="tok-op">-</span> <span class="tok-num">1</span>):
+            <span class="tok-kw">if</span> arr[i] <span class="tok-op">&gt;</span> arr[i <span class="tok-op">+</span> <span class="tok-num">1</span>]:
+                <span class="tok-kw">raise</span> <span class="tok-bi">Exception</span>(<span class="tok-str">"PANIC"</span>)
+        checks <span class="tok-op">+=</span> <span class="tok-num">1</span>  <span class="tok-cm"># ...but what if?</span>
+    <span class="tok-kw">return</span> arr  <span class="tok-cm"># it's sorted. it was always sorted.</span>`,
+};
+
+function renderCode(key) {
+  const block = document.getElementById('codeBlock');
+  const code = PYTHON_CODE[key];
+  if (!code) {
+    block.innerHTML = '<span class="tok-cm"># No Python implementation available for this algorithm.</span>';
+    return;
+  }
+  // Wrap bare (unspanned) def/function-name lines in colour
+  // The strings already contain pre-rendered span tags; just output directly
+  block.innerHTML = `<span class="tok-kw">def</span> <span class="tok-fn">${key.replace('sort','').replace('mergesort','merge_sort').replace('quicksort','quick_sort')}</span>` + '\n' + code;
+  // Actually just set directly — code strings are already fully highlighted
+  block.innerHTML = code;
+}
+
 function buildSidebar() {
   const sidebar = document.querySelector('.sidebar');
   Object.entries(ALGORITHMS).forEach(([key, algo]) => {
@@ -1556,6 +1850,7 @@ function selectAlgo(key) {
   document.getElementById('algoTitle').textContent = ALGORITHMS[key].name.toUpperCase();
   document.getElementById('algoDesc').textContent = ALGORITHMS[key].desc;
   renderAnalysis(key);
+  renderCode(key);
   const n = parseInt(document.getElementById('sizeSlider').value);
   makeArray(n);
   setStatus('ready');
